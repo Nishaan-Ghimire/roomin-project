@@ -9,6 +9,9 @@ import {
     getBookingRequestsForOwner
 ,acceptBookingRequest
      } from '../controllers/property.controller.js';
+
+     import searchProperties from '../controllers/search.controller.js';
+
 // // Public routes
 // router.get('/', PropertyController.getAllProperties);
 // router.get('/search', SearchController.advancedSearch);
@@ -35,6 +38,7 @@ router.patch('/booking-requests/:bookingRequestId/accept', authMiddleware, accep
 // router.delete('/:id/bookmark', PropertyController.removeBookmark);
 
 
-
+router.use('/search-properties',searchProperties);
+//router.post("/add-property",PropertyController.createProperty);
 
 export default router;

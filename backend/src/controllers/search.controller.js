@@ -1,21 +1,62 @@
-import Property from '../models/properties.model.js';
+import express from 'express';
+import client from '../elasticsearch/client.js';
 
-export const searchProperties = async (req, res) => {
+const router = express.Router();
+
+router.post('/search', async (req, res) => {
+  const q1  = req.body;
+  console.log('🔍 Search controller triggered:', req.body ,req.body.query);
+  const q = q1.query;
+  if (!q || typeof q !== 'string' || q.trim().length === 0) {
+  return res.status(400).json({
+    success: false,
+    message: 'Search query is required',
+    received: req.body,
+    debug: {
+        queryValue: q,
+        queryType: typeof q
+        
+      }
+  });
+}
+
+
   try {
-    const { q } = req.query;
+    console.log('>search query: ',q, typeof q);
+    const result = await client.search({
+      index: 'properties',
+      body: {
+        query: {
+          multi_match: {
+            query: q,
+            fields: [
+              'title^5',
+              'city^4',
+              'description^3',
+              'landmark^2',
+              'roomType^4'
+            ],
+            fuzziness: 'AUTO'
+          }
+        }
+      }
+    });
+    console.log('>search result: ',result.hits.hits);
+    const hits = result.hits.hits.map(hit => ({
+  id: hit._id,
+  ...hit._source,
+  _score: hit._score // include score for comparison
+}));
 
-    if (!q || q.trim() === '') {
-      return res.status(400).json({ message: 'Query parameter `q` is required' });
-    }
+// Find the hit with the highest score
+const highestScoreHit = hits.reduce((max, hit) => (hit._score > max._score ? hit : max), hits[0]);
 
-    const results = await Property.find(
-      { $text: { $search: q } },
-      { score: { $meta: 'textScore' } }
-    ).sort({ score: { $meta: 'textScore' } });
-
-    res.status(200).json({ success: true, properties: results });
+console.log(">highestScoreHit: ", highestScoreHit);
+res.status(200).json(highestScoreHit);
   } catch (err) {
-    console.error('Full-text search error:', err);
-    res.status(500).json({ message: 'Internal Server Error' });
+    console.error(err);
+    res.status(500).json({ error: 'Search failed' });
   }
-};
+});
+
+export default router;

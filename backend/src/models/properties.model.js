@@ -1,3 +1,4 @@
+import { indexProperty, removeProperty } from '../elasticsearch/sync.js';
 import mongoose, { Schema } from "mongoose";
 const nearbyPlaceSchema = new mongoose.Schema({
   name: {
@@ -111,6 +112,17 @@ propertiesSchema.index(
 );
 
 
+propertiesSchema.post('save', function () {
+  indexProperty(this);
+});
+
+propertiesSchema.post('findOneAndUpdate', function (doc) {
+  if (doc) indexProperty(doc);
+});
+
+propertiesSchema.post('remove', function () {
+  removeProperty(this._id);
+});
 
 
 
